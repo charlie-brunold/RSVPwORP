@@ -8,7 +8,10 @@ st.set_page_config(page_title="Reader", layout="centered")
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap');
-    .stApp { background-color: #F9F9F7; }
+    .stApp {
+        background-color: #F9F9F7;
+        color: #1D1D1D;
+    }
     .reader-card {
         background: #ffffff;
         border: 1px solid #E6E6E1;
@@ -28,6 +31,28 @@ st.markdown("""
     }
     .pivot { color: #D94343; font-weight: 700; }
     .prefix, .suffix { color: #1D1D1D; font-weight: 400; }
+
+    /* Text visibility fixes */
+    .stRadio label, .stRadio div[role="radiogroup"] label {
+        color: #1D1D1D !important;
+    }
+    .stTextArea label, .stTextArea textarea {
+        color: #1D1D1D !important;
+    }
+    .stTextArea textarea::placeholder {
+        color: #666666 !important;
+    }
+    .stButton button {
+        color: #1D1D1D !important;
+        background-color: #ffffff !important;
+        border: 1px solid #E6E6E1 !important;
+    }
+    .stButton button:hover {
+        border-color: #D94343 !important;
+    }
+    label, p, span, div {
+        color: #1D1D1D;
+    }
     [data-testid="stHeader"], [data-testid="stFooter"] { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
@@ -55,13 +80,26 @@ wpm = st.sidebar.select_slider(
 # --- Main UI ---
 st.markdown("<h3 style='text-align: center; color: #1D1D1D; margin-bottom: 20px;'>Reading Interface</h3>", unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("Upload PDF", type="pdf", label_visibility="collapsed")
+# Input method selector
+input_method = st.radio("Choose input method:", ["Upload PDF", "Paste Text"], horizontal=True)
 
-if uploaded_file and not st.session_state.word_corpus:
-    doc = pymupdf.open(stream=uploaded_file.read(), filetype="pdf")
-    st.session_state.word_corpus = [w[4].strip() for p in doc for w in p.get_text("words") if w[4].strip()]
-    st.session_state.current_idx = 0
-    st.rerun()
+if input_method == "Upload PDF":
+    uploaded_file = st.file_uploader("Upload PDF", type="pdf", label_visibility="collapsed")
+
+    if uploaded_file and not st.session_state.word_corpus:
+        doc = pymupdf.open(stream=uploaded_file.read(), filetype="pdf")
+        st.session_state.word_corpus = [w[4].strip() for p in doc for w in p.get_text("words") if w[4].strip()]
+        st.session_state.current_idx = 0
+        st.rerun()
+
+else:  # Paste Text
+    pasted_text = st.text_area("Paste your text here:", height=200, label_visibility="collapsed", placeholder="Paste your text here and click 'Load Text'")
+
+    if st.button("Load Text") and pasted_text and not st.session_state.word_corpus:
+        # Split text into words, removing empty strings
+        st.session_state.word_corpus = [word.strip() for word in pasted_text.split() if word.strip()]
+        st.session_state.current_idx = 0
+        st.rerun()
 
 if st.session_state.word_corpus:
     st.markdown('<div class="reader-card">', unsafe_allow_html=True)
@@ -81,7 +119,7 @@ if st.session_state.word_corpus:
             st.session_state.is_playing = False
             st.rerun()
     with col3:
-        if st.button("Clear PDF"):
+        if st.button("Clear Text"):
             st.session_state.word_corpus = []
             st.session_state.current_idx = 0
             st.session_state.is_playing = False
